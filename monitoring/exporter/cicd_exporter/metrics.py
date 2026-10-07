@@ -404,26 +404,37 @@ def quality_families(runs: list[dict], recent: int) -> list:
             if (bm.get("artifact") or {}).get("size_bytes"):
                 run_image.add_metric([workflow, number], bm["artifact"]["size_bytes"])
 
+        def newest(extract, runs_with_metrics=with_metrics):
+            """Value from the most recent run that produced it (skipped stages publish nothing)."""
+            for run in reversed(runs_with_metrics):
+                value = extract(run["build_metrics"])
+                if value is not None:
+                    return value
+            return None
+
         latest = with_metrics[-1]
-        bm = latest["build_metrics"]
         info.add_metric([workflow, str(latest.get("number")), latest.get("sha", "")], 1)
-        if bm.get("tests"):
+        if (test_results := newest(lambda bm: bm.get("tests"))) is not None:
             for result in ("passed", "failed", "errors", "skipped"):
-                tests.add_metric([workflow, result], bm["tests"].get(result, 0))
-            test_time.add_metric([workflow], bm["tests"].get("duration_seconds", 0))
-        if bm.get("coverage"):
-            coverage.add_metric([workflow], bm["coverage"]["line_rate"])
-        if bm.get("lint"):
-            lint.add_metric([workflow], bm["lint"]["issues"])
-        for scanner, counts in _vulnerability_counts(bm).items():
-            for severity, count in counts.items():
+                tests.add_metric([workflow, result], test_results.get(result, 0))
+            test_time.add_metric([workflow], test_results.get("duration_seconds", 0))
+        if (cov := newest(lambda bm: bm.get("coverage"))) is not None:
+            coverage.add_metric([workflow], cov["line_rate"])
+        if (lint_result := newest(lambda bm: bm.get("lint"))) is not None:
+            lint.add_metric([workflow], lint_result["issues"])
+        for scanner in ("bandit", "pip-audit", "trivy"):
+            counts = newest(lambda bm, name=scanner: _vulnerability_counts(bm).get(name))
+            for severity, count in (counts or {}).items():
                 vulns.add_metric([workflow, scanner, severity], count)
-        if (bm.get("artifact") or {}).get("size_bytes"):
-            image.add_metric([workflow], bm["artifact"]["size_bytes"])
-        for gate, passed in (bm.get("quality_gates") or {}).items():
+        if (size := newest(lambda bm: (bm.get("artifact") or {}).get("size_bytes"))) is not None:
+            image.add_metric([workflow], size)
+        latest_gates: dict[str, bool] = {}
+        for run in with_metrics:  # oldest -> newest, so each gate keeps its latest result
+            latest_gates.update(run["build_metrics"].get("quality_gates") or {})
+        for gate, passed in latest_gates.items():
             gates.add_metric([workflow, gate], 1 if passed else 0)
-        if (bm.get("smoke_test") or {}).get("avg_latency_ms") is not None:
-            smoke.add_metric([workflow], bm["smoke_test"]["avg_latency_ms"])
+        if (latency := newest(lambda bm: (bm.get("smoke_test") or {}).get("avg_latency_ms"))) is not None:
+            smoke.add_metric([workflow], latency)
     return [
         info,
         tests,

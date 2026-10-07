@@ -1609,7 +1609,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "default_jenkins_builds_last_build_tests_skipped{jenkins_job=\"taskflow-api\"}",
+          "expr": "default_jenkins_builds_last_last_build_tests_skipped{jenkins_job=\"taskflow-api\"}",
           "legendFormat": "skipped",
           "range": false,
           "instant": true,

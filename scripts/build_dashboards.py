@@ -1385,7 +1385,7 @@ def build_quality() -> Board:
                     instant=True,
                 ),
                 q(
-                    'default_jenkins_builds_last_build_tests_skipped{jenkins_job="taskflow-api"}',
+                    'default_jenkins_builds_last_last_build_tests_skipped{jenkins_job="taskflow-api"}',
                     "skipped",
                     "C",
                     instant=True,
@@ -1545,7 +1545,12 @@ def jenkins() -> Board:
             [
                 q(f"default_jenkins_builds_last_build_tests_total{{{j}}}", "total", "A", instant=True),
                 q(f"default_jenkins_builds_last_build_tests_failing{{{j}}}", "failing", "B", instant=True),
-                q(f"default_jenkins_builds_last_build_tests_skipped{{{j}}}", "skipped", "C", instant=True),
+                q(
+                    f"default_jenkins_builds_last_last_build_tests_skipped{{{j}}}",
+                    "skipped",
+                    "C",
+                    instant=True,
+                ),
             ],
             text_mode="value_and_name",
             thresholds=steps(base=BLUE),

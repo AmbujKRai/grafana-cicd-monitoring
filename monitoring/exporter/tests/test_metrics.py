@@ -94,6 +94,30 @@ def test_quality_metrics_come_from_latest_run_with_metrics():
     assert samples(families, "cicd_build_info")[0].labels["run_number"] == "5"
 
 
+def test_skipped_stages_keep_previous_quality_values():
+    runs = history()
+    # run 6 failed the security stage: no image, no Trivy scan, sca gate failed
+    security_failure = {
+        "tests": BUILD_METRICS["tests"],
+        "coverage": BUILD_METRICS["coverage"],
+        "security": {
+            "bandit": {"high": 0, "medium": 0, "low": 0},
+            "pip_audit": {"vulnerabilities": 2, "packages": []},
+        },
+        "quality_gates": {"tests": True, "coverage": True, "sast": True, "sca": False},
+    }
+    runs.append(make_run(6, 6, 150, "failure", failed_job="Build & Scan Image", metrics=security_failure))
+    families = quality_families(runs, recent=10)
+    assert samples(families, "cicd_build_image_size_bytes")[0].value == 150_000_000  # from run 5
+    gates = {s.labels["gate"]: s.value for s in samples(families, "cicd_build_quality_gate")}
+    assert gates["sca"] == 0 and gates["container"] == 1
+    pip_audit = [
+        s.value for s in samples(families, "cicd_build_vulnerabilities") if s.labels["scanner"] == "pip-audit"
+    ]
+    assert pip_audit == [2]
+    assert samples(families, "cicd_build_info")[0].labels["run_number"] == "6"
+
+
 def test_collector_exposition(config):
     store = Store()
     for run in history():
