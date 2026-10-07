@@ -1,0 +1,28 @@
+[project]
+name = "taskflow-api"
+version = "1.0.0"
+description = "Sample service built by the monitored CI/CD pipeline"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.coverage.run]
+source = ["app"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+extend-exclude = [".tools", ".data"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+
+[tool.bandit]
+exclude_dirs = ["tests", "monitoring/exporter/tests"]

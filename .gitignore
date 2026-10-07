@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Pipeline outputs
+reports/
+dist/
+build-metrics.json
+
+# Local monitoring stack (downloaded binaries, data, logs, pids)
+.tools/
+.data/
+.logs/
+.run/
+
+# Secrets
+.env

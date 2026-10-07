@@ -1,0 +1,17 @@
+.git
+.github
+.tools
+.data
+.logs
+.run
+.venv
+.env
+ci
+docs
+monitoring
+reports
+scripts
+tests
+*.md
+Jenkinsfile
+docker-compose.yml
