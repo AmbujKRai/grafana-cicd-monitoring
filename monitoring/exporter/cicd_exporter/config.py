@@ -53,5 +53,7 @@ class Config:
             deploy_job=os.getenv("DEPLOY_JOB_NAME", "Deploy to Staging"),
             deploy_environment=os.getenv("DEPLOY_ENVIRONMENT", "staging"),
             main_branch=os.getenv("MAIN_BRANCH", "main"),
-            ignore_events=frozenset(e.strip() for e in os.getenv("IGNORE_EVENTS", "dynamic").split(",") if e.strip()),
+            ignore_events=frozenset(
+                event.strip() for event in os.getenv("IGNORE_EVENTS", "dynamic").split(",") if event.strip()
+            ),
         )
