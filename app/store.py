@@ -68,7 +68,7 @@ class TaskStore:
 
     def list(self, done: bool | None = None, priority: str | None = None) -> list[Task]:
         tasks = sorted(self._tasks.values(), key=lambda t: t.id)
-        if done:
+        if done is not None:  # done=False is a valid filter, so check for None explicitly
             tasks = [t for t in tasks if t.done == done]
         if priority is not None:
             tasks = [t for t in tasks if t.priority == priority]
