@@ -1,0 +1,80 @@
+name: Monitoring Stack Validation
+
+# Tests the monitoring-as-code itself: Prometheus config/rules, generated dashboards,
+# and a full docker-compose start-up with provisioning checks.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "monitoring/**"
+      - "docker-compose.yml"
+      - "scripts/build_dashboards.py"
+      - "scripts/verify-stack.sh"
+      - ".github/workflows/monitoring-stack.yml"
+  pull_request:
+    paths:
+      - "monitoring/**"
+      - "docker-compose.yml"
+      - "scripts/build_dashboards.py"
+      - "scripts/verify-stack.sh"
+      - ".github/workflows/monitoring-stack.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  validate:
+    name: Validate configuration
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: promtool check config and rules
+        run: |
+          promtool() { docker run --rm --entrypoint promtool -v "$PWD/monitoring/prometheus:/cfg:ro" prom/prometheus:v3.15.0 "$@"; }
+          promtool check config /cfg/prometheus.docker.yml
+          promtool check config /cfg/prometheus.yml
+          promtool check rules /cfg/rules/ci-recording-rules.yml
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Dashboards are generated from scripts/build_dashboards.py
+        run: |
+          python scripts/build_dashboards.py
+          git diff --exit-code -- monitoring/grafana/dashboards
+      - name: Provisioning files are valid YAML
+        run: |
+          pip install --quiet pyyaml==6.0.3
+          python - <<'EOF'
+          import glob, yaml
+          files = glob.glob("monitoring/**/*.y*ml", recursive=True) + ["docker-compose.yml"]
+          for name in files:
+              yaml.safe_load(open(name, encoding="utf-8"))
+              print("ok", name)
+          EOF
+
+  stack:
+    name: Docker Compose smoke test
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Start the monitoring stack
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: docker compose up -d --build --wait --wait-timeout 240
+      - name: Verify exporter, Prometheus and Grafana provisioning
+        run: bash scripts/verify-stack.sh
+      - name: Container logs
+        if: failure()
+        run: docker compose logs --tail 200
+      - name: Tear down
+        if: always()
+        run: docker compose down -v

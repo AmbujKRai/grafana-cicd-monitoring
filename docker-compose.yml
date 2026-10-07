@@ -1,0 +1,82 @@
+# Monitoring stack for Docker users (Linux/macOS/Windows with Docker Desktop).
+# Windows without Docker: use scripts\setup-windows.ps1 and scripts\start-stack.ps1 instead.
+#
+#   GITHUB_REPOSITORY=owner/repo docker compose up -d --build
+#
+# Grafana: http://localhost:3000  Prometheus: http://localhost:9090  Exporter: http://localhost:9200
+name: cicd-monitoring
+
+services:
+  exporter:
+    build: ./monitoring/exporter
+    image: cicd-exporter:local
+    environment:
+      GITHUB_REPOSITORY: ${GITHUB_REPOSITORY:?set GITHUB_REPOSITORY=owner/repo (in .env or the shell)}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      POLL_INTERVAL_SECONDS: ${POLL_INTERVAL_SECONDS:-}
+      ACTIVE_POLL_INTERVAL_SECONDS: ${ACTIVE_POLL_INTERVAL_SECONDS:-}
+    volumes:
+      - exporter-data:/data
+    ports:
+      - "127.0.0.1:9200:9200"
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v3.15.0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=30d
+      - --web.enable-lifecycle
+    volumes:
+      - ./monitoring/prometheus/prometheus.docker.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/rules:/etc/prometheus/rules:ro
+      - prometheus-data:/prometheus
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # optional Jenkins running on the host
+    ports:
+      - "127.0.0.1:9090:9090"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/ready"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:13.2.3
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD:-admin}
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_USERS_DEFAULT_THEME: dark
+      GF_PLUGINS_PREINSTALL_DISABLED: "true"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_NEWS_NEWS_FEED_ENABLED: "false"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/dashboards/cicd-overview.json
+      # read by the provisioning files
+      GF_DASHBOARDS_DIR: /etc/grafana/dashboards
+      PROMETHEUS_URL: http://prometheus:9090
+      ALERT_WEBHOOK_URL: http://exporter:9200/alerts
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/etc/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "127.0.0.1:3000:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+
+volumes:
+  exporter-data:
+  prometheus-data:
+  grafana-data:
