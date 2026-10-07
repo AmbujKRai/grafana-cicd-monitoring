@@ -1,0 +1,116 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-07T19:00:54+00:00",
+  "run": {
+    "id": 37671006965,
+    "number": 4,
+    "attempt": 1,
+    "workflow": "CI/CD Pipeline",
+    "sha": "c1255b3cfa49829c6e3998d4c9f7dc3448fb8bee",
+    "branch": "main",
+    "event": "push",
+    "actor": "AmbujKRai"
+  },
+  "jobs": {
+    "lint": "success",
+    "test": "success",
+    "security": "success",
+    "build": "success",
+    "deploy-staging": "success"
+  },
+  "tests": {
+    "total": 27,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "duration_seconds": 0.383,
+    "passed": 27
+  },
+  "coverage": {
+    "line_rate": 0.9927,
+    "branch_rate": 0.9412
+  },
+  "lint": {
+    "issues": 0
+  },
+  "security": {
+    "bandit": {
+      "high": 0,
+      "medium": 0,
+      "low": 0
+    },
+    "pip_audit": {
+      "vulnerabilities": 0,
+      "packages": []
+    },
+    "trivy": {
+      "critical": 0,
+      "high": 44,
+      "medium": 63,
+      "low": 62,
+      "unknown": 2,
+      "critical_fixable": 0
+    }
+  },
+  "artifact": {
+    "image": "ghcr.io/ambujkrai/grafana-cicd-monitoring:sha-c1255b3",
+    "size_bytes": 124552672
+  },
+  "smoke_test": {
+    "base_url": "http://localhost:8000",
+    "passed": true,
+    "startup_seconds": 1.02,
+    "avg_latency_ms": 1.1,
+    "checks": [
+      {
+        "check": "health",
+        "status": 200,
+        "ok": true,
+        "latency_ms": 1.1
+      },
+      {
+        "check": "create task",
+        "status": 201,
+        "ok": true,
+        "latency_ms": 1.2
+      },
+      {
+        "check": "read task",
+        "status": 200,
+        "ok": true,
+        "latency_ms": 1.3
+      },
+      {
+        "check": "complete task",
+        "status": 200,
+        "ok": true,
+        "latency_ms": 1.0
+      },
+      {
+        "check": "stats",
+        "status": 200,
+        "ok": true,
+        "latency_ms": 0.9
+      },
+      {
+        "check": "delete task",
+        "status": 204,
+        "ok": true,
+        "latency_ms": 0.9
+      },
+      {
+        "check": "validation error",
+        "status": 400,
+        "ok": true,
+        "latency_ms": 1.0
+      }
+    ]
+  },
+  "quality_gates": {
+    "tests": true,
+    "coverage": true,
+    "sast": true,
+    "sca": true,
+    "container": true
+  }
+}
