@@ -1,0 +1,411 @@
+# Grafana-managed alert rules (alerting as code). Every rule is an instant Prometheus
+# query (A) plus a threshold expression (B). Notifications are routed by the policy in
+# notification-policies.yml to the contact point in contact-points.yml.
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: pipeline-health
+    folder: CI/CD Alerts
+    interval: 30s
+    rules:
+      - uid: cicd-pipeline-failed
+        title: Pipeline failing on main (GitHub Actions)
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: cicd_workflow_last_run_status{branch="main"}
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: lt, params: [1] }
+        noDataState: OK
+        execErrState: Error
+        for: 0s
+        dashboardUid: gha-performance
+        panelId: 9
+        labels:
+          severity: critical
+          ci_system: github-actions
+        annotations:
+          summary: "{{ $labels.workflow }} is failing on main"
+          description: "The latest run of {{ $labels.workflow }} on main failed. Check the stage breakdown in Grafana and the run logs on GitHub."
+
+      - uid: cicd-jenkins-failed
+        title: Jenkins build failing
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: default_jenkins_builds_last_build_result_ordinal
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                # result ordinal 2 = FAILURE
+                - evaluator: { type: within_range, params: [1.5, 2.5] }
+        noDataState: OK
+        execErrState: Error
+        for: 0s
+        dashboardUid: jenkins-builds
+        panelId: 3
+        labels:
+          severity: critical
+          ci_system: jenkins
+        annotations:
+          summary: "Jenkins job {{ $labels.jenkins_job }} is failing"
+          description: "The last build of {{ $labels.jenkins_job }} finished with FAILURE."
+
+      - uid: cicd-low-success-rate
+        title: Low pipeline success rate (7 days)
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: |
+                sum by (workflow) (cicd_workflow_runs_window{window="7d",conclusion="success"})
+                  / sum by (workflow) (cicd_workflow_runs_window{window="7d",conclusion=~"success|failure"})
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: lt, params: [0.8] }
+        noDataState: OK
+        execErrState: Error
+        for: 1m
+        dashboardUid: gha-performance
+        panelId: 3
+        labels:
+          severity: warning
+          ci_system: github-actions
+        annotations:
+          summary: "{{ $labels.workflow }} success rate is below 80%"
+          description: "Only {{ humanizePercentage $values.A.Value }} of the runs in the last 7 days succeeded."
+
+  - orgId: 1
+    name: pipeline-performance
+    folder: CI/CD Alerts
+    interval: 30s
+    rules:
+      - uid: cicd-slow-build
+        title: Build time regression
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: |
+                cicd_workflow_last_run_duration_seconds{branch="main"}
+                  / on (workflow) cicd_workflow_duration_window_seconds{window="7d",stat="p50"}
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [1.5] }
+        noDataState: OK
+        execErrState: Error
+        for: 0s
+        dashboardUid: gha-performance
+        panelId: 9
+        labels:
+          severity: warning
+          ci_system: github-actions
+        annotations:
+          summary: "{{ $labels.workflow }}: last build was {{ printf \"%.1f\" $values.A.Value }}x slower than the 7-day median"
+          description: "A run on main took more than 1.5x the median duration. Look at the stage breakdown and slowest steps panels."
+
+      - uid: cicd-runner-backlog
+        title: Runs waiting for runners
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: sum by (workflow) (cicd_workflow_runs_active{status="queued"})
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+        noDataState: OK
+        execErrState: Error
+        for: 5m
+        labels:
+          severity: warning
+          ci_system: github-actions
+        annotations:
+          summary: "{{ $labels.workflow }} runs have been queued for more than 5 minutes"
+          description: "No runner picked up the queued runs. Check runner capacity or concurrency limits."
+
+      - uid: cicd-jenkins-queue
+        title: Jenkins build queue backlog
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: sum(default_jenkins_executors_queue_length)
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+        noDataState: OK
+        execErrState: Error
+        for: 5m
+        labels:
+          severity: warning
+          ci_system: jenkins
+        annotations:
+          summary: "Jenkins has builds waiting for a free executor"
+          description: "{{ $values.A.Value }} build(s) have been waiting in the queue for 5 minutes."
+
+  - orgId: 1
+    name: quality-security
+    folder: CI/CD Alerts
+    interval: 30s
+    rules:
+      - uid: cicd-security-gate
+        title: Security gate failed
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: cicd_build_quality_gate{gate=~"sast|sca|container"}
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: lt, params: [1] }
+        noDataState: OK
+        execErrState: Error
+        for: 0s
+        dashboardUid: build-quality
+        panelId: 9
+        labels:
+          severity: critical
+          ci_system: github-actions
+        annotations:
+          summary: "{{ $labels.gate }} security gate failed in {{ $labels.workflow }}"
+          description: "The latest build has security findings above the policy (sast = Bandit HIGH, sca = vulnerable dependency, container = fixable CRITICAL CVE)."
+
+      - uid: cicd-quality-gate
+        title: Quality gate failed (tests / coverage)
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: cicd_build_quality_gate{gate=~"tests|coverage"}
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: lt, params: [1] }
+        noDataState: OK
+        execErrState: Error
+        for: 0s
+        dashboardUid: build-quality
+        panelId: 9
+        labels:
+          severity: warning
+          ci_system: github-actions
+        annotations:
+          summary: "{{ $labels.gate }} gate failed in {{ $labels.workflow }}"
+          description: "Failing unit tests or line coverage below 80% in the latest build."
+
+  - orgId: 1
+    name: monitoring-stack
+    folder: CI/CD Alerts
+    interval: 30s
+    rules:
+      - uid: cicd-exporter-down
+        title: CI/CD exporter down
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: up{job="cicd-exporter"}
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: lt, params: [1] }
+        noDataState: Alerting
+        execErrState: Error
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Prometheus cannot scrape the CI/CD exporter"
+          description: "GitHub Actions metrics are not being collected."
+
+      - uid: cicd-jenkins-down
+        title: Jenkins down
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: up{job="jenkins"}
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: lt, params: [1] }
+        noDataState: OK
+        execErrState: Error
+        for: 2m
+        labels:
+          severity: warning
+          ci_system: jenkins
+        annotations:
+          summary: "Prometheus cannot scrape Jenkins"
+          description: "Jenkins at {{ $labels.instance }} is down or its /prometheus endpoint is unreachable."
+
+      - uid: cicd-github-quota
+        title: GitHub API quota low
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: cicd_github_api_rate_limit_remaining
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: lt, params: [10] }
+        noDataState: OK
+        execErrState: Error
+        for: 0s
+        labels:
+          severity: warning
+        annotations:
+          summary: "Only {{ $values.A.Value }} GitHub API requests left this hour"
+          description: "The exporter slows down polling automatically. Set GITHUB_TOKEN to raise the limit to 5000 requests/hour."
+
+      - uid: cicd-exporter-stale
+        title: Exporter not polling GitHub
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: time() - cicd_exporter_last_poll_timestamp_seconds
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [900] }
+        noDataState: OK
+        execErrState: Error
+        for: 0s
+        labels:
+          severity: warning
+        annotations:
+          summary: "The exporter has not polled GitHub for {{ humanizeDuration $values.A.Value }}"
+          description: "Check .logs/exporter.log for network or rate-limit errors."

@@ -13,9 +13,9 @@ from cicd_exporter import __version__
 from cicd_exporter.store import (
     ACTIVE_STATUSES,
     FINISHED_CONCLUSIONS,
-    JOB_DURATION_BUCKETS,
     QUEUE_BUCKETS,
     RUN_DURATION_BUCKETS,
+    STAGE_DURATION_BUCKETS,
     find_job,
     job_duration,
     run_duration,
@@ -30,7 +30,10 @@ RESTORE_WINDOW = 30 * 86400
 
 COUNTERS = {
     "cicd_workflow_runs": ("Completed workflow runs", ["workflow", "branch", "event", "conclusion"]),
-    "cicd_job_runs": ("Completed jobs (pipeline stages)", ["workflow", "job", "conclusion"]),
+    "cicd_stage_runs": (
+        "Completed pipeline stages (GitHub Actions jobs)",
+        ["workflow", "stage", "conclusion"],
+    ),
     "cicd_deployments": ("Deployments performed by the pipeline", ["environment", "conclusion"]),
     "cicd_alert_notifications": (
         "Alert notifications received from Grafana",
@@ -39,8 +42,12 @@ COUNTERS = {
 }
 HISTOGRAMS = {
     "cicd_workflow_run_duration_seconds": ("Workflow run duration", ["workflow"], RUN_DURATION_BUCKETS),
-    "cicd_job_duration_seconds": ("Job (stage) duration", ["workflow", "job"], JOB_DURATION_BUCKETS),
-    "cicd_job_queue_seconds": ("Time jobs waited for a runner", ["workflow"], QUEUE_BUCKETS),
+    "cicd_stage_duration_seconds": (
+        "Stage (GitHub Actions job) duration",
+        ["workflow", "stage"],
+        STAGE_DURATION_BUCKETS,
+    ),
+    "cicd_stage_queue_seconds": ("Time stages waited for a runner", ["workflow"], QUEUE_BUCKETS),
 }
 
 
@@ -178,31 +185,21 @@ def last_run_families(runs: list[dict]) -> list:
     return [status, duration, finished_at, number]
 
 
+RUN_LABELS = ["workflow", "run_number", "run_id", "branch", "event", "conclusion", "commit", "actor", "title"]
+
+
 def recent_run_families(runs: list[dict], recent: int) -> list:
+    # Duration and wait share the full label set so Grafana can merge them into one table row per run
     run_duration_g = GaugeMetricFamily(
-        "cicd_run_duration_seconds",
-        "Duration of each recent run (one series per run)",
-        labels=[
-            "workflow",
-            "run_number",
-            "run_id",
-            "branch",
-            "event",
-            "conclusion",
-            "commit",
-            "actor",
-            "title",
-        ],
+        "cicd_run_duration_seconds", "Duration of each recent run (one series per run)", labels=RUN_LABELS
     )
     run_wait = GaugeMetricFamily(
-        "cicd_run_wait_seconds",
-        "Time from trigger until the first job started",
-        labels=["workflow", "run_number"],
+        "cicd_run_wait_seconds", "Time from trigger until the first job started", labels=RUN_LABELS
     )
     run_jobs = GaugeMetricFamily(
-        "cicd_run_job_duration_seconds",
-        "Duration of each job in recent runs",
-        labels=["workflow", "run_number", "job"],
+        "cicd_run_stage_duration_seconds",
+        "Duration of each stage in recent runs",
+        labels=["workflow", "run_number", "stage"],
     )
     run_finished = GaugeMetricFamily(
         "cicd_run_end_timestamp_seconds",
@@ -212,23 +209,21 @@ def recent_run_families(runs: list[dict], recent: int) -> list:
     for workflow, wf_runs in by_workflow(completed(runs)).items():
         for run in wf_runs[-recent:]:
             number = str(run.get("number"))
+            labels = [
+                workflow,
+                number,
+                str(run["id"]),
+                run["branch"],
+                run["event"],
+                run.get("conclusion") or "unknown",
+                run.get("sha", ""),
+                run.get("actor", ""),
+                run.get("title", ""),
+            ]
             if (d := run_duration(run)) is not None:
-                run_duration_g.add_metric(
-                    [
-                        workflow,
-                        number,
-                        str(run["id"]),
-                        run["branch"],
-                        run["event"],
-                        run.get("conclusion") or "unknown",
-                        run.get("sha", ""),
-                        run.get("actor", ""),
-                        run.get("title", ""),
-                    ],
-                    d,
-                )
+                run_duration_g.add_metric(labels, d)
             if (w := run_wait_time(run)) is not None:
-                run_wait.add_metric([workflow, number], w)
+                run_wait.add_metric(labels, w)
             run_finished.add_metric([workflow, number], run_end(run) or 0)
             for job in run.get("jobs") or []:
                 if (jd := job_duration(job)) is not None:
@@ -240,7 +235,7 @@ def step_families(runs: list[dict]) -> list:
     steps = GaugeMetricFamily(
         "cicd_step_duration_seconds",
         "Step durations of the latest completed run (bottleneck analysis)",
-        labels=["workflow", "job", "step"],
+        labels=["workflow", "stage", "step"],
     )
     for workflow, wf_runs in by_workflow(completed(runs)).items():
         latest = wf_runs[-1]

@@ -16,7 +16,7 @@ from datetime import datetime
 from pathlib import Path
 
 RUN_DURATION_BUCKETS = (30, 60, 90, 120, 180, 240, 300, 420, 600, 900, 1200)
-JOB_DURATION_BUCKETS = (5, 10, 20, 30, 45, 60, 90, 120, 180, 300, 600)
+STAGE_DURATION_BUCKETS = (5, 10, 20, 30, 45, 60, 90, 120, 180, 300, 600)
 QUEUE_BUCKETS = (1, 2, 5, 10, 20, 30, 60, 120, 300)
 
 ACTIVE_STATUSES = {"queued", "in_progress", "waiting", "pending", "requested"}
@@ -223,16 +223,16 @@ class Store:
                 if job_conclusion in (None, "skipped"):
                     continue
                 self.inc(
-                    "cicd_job_runs_total",
-                    {"workflow": workflow, "job": job["name"], "conclusion": job_conclusion},
+                    "cicd_stage_runs_total",
+                    {"workflow": workflow, "stage": job["name"], "conclusion": job_conclusion},
                 )
                 duration = job_duration(job)
                 if job_conclusion in FINISHED_CONCLUSIONS and duration is not None:
-                    labels = {"workflow": workflow, "job": job["name"]}
-                    self.observe("cicd_job_duration_seconds", labels, JOB_DURATION_BUCKETS, duration)
+                    labels = {"workflow": workflow, "stage": job["name"]}
+                    self.observe("cicd_stage_duration_seconds", labels, STAGE_DURATION_BUCKETS, duration)
                 queued = job_queue_time(job)
                 if queued is not None:
-                    self.observe("cicd_job_queue_seconds", {"workflow": workflow}, QUEUE_BUCKETS, queued)
+                    self.observe("cicd_stage_queue_seconds", {"workflow": workflow}, QUEUE_BUCKETS, queued)
                 if (
                     job["name"] == deploy_job
                     and run["branch"] == main_branch

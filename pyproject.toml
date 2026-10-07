@@ -25,5 +25,9 @@ extend-exclude = [".tools", ".data"]
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP"]
 
+[tool.ruff.lint.per-file-ignores]
+# PromQL expressions in the dashboard generator are long string literals
+"scripts/build_dashboards.py" = ["E501"]
+
 [tool.bandit]
 exclude_dirs = ["tests", "monitoring/exporter/tests"]

@@ -63,7 +63,7 @@ def test_failed_run_does_not_count_as_deployment(tmp_path):
         completed_run(failed_job="Build & Scan Image"), "Deploy to Staging", "staging", "main"
     )
     assert "cicd_deployments_total" not in store.counters
-    jobs = store.counters["cicd_job_runs_total"]
+    jobs = store.counters["cicd_stage_runs_total"]
     conclusions = sorted(key for key in jobs)
     assert any('"failure"' in key for key in conclusions)
 

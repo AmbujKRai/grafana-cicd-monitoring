@@ -1,0 +1,59 @@
+# Recording rules that normalise GitHub Actions (cicd-exporter) and Jenkins (Prometheus plugin)
+# metrics into one set of ci:* series with the same labels and units, so Grafana can compare
+# both CI systems side by side without per-tool queries.
+groups:
+  - name: ci-normalised
+    interval: 30s
+    rules:
+      # ---- GitHub Actions ---------------------------------------------------------
+      - record: ci:builds:total
+        expr: sum by (pipeline) (label_replace(cicd_workflow_runs_total{conclusion=~"success|failure"}, "pipeline", "$1", "workflow", "(.*)"))
+        labels:
+          ci_system: GitHub Actions
+      - record: ci:builds_success:total
+        expr: sum by (pipeline) (label_replace(cicd_workflow_runs_total{conclusion="success"}, "pipeline", "$1", "workflow", "(.*)"))
+        labels:
+          ci_system: GitHub Actions
+      - record: ci:build_duration_seconds:avg
+        expr: |
+          sum by (pipeline) (label_replace(cicd_workflow_run_duration_seconds_sum, "pipeline", "$1", "workflow", "(.*)"))
+            / sum by (pipeline) (label_replace(cicd_workflow_run_duration_seconds_count, "pipeline", "$1", "workflow", "(.*)"))
+        labels:
+          ci_system: GitHub Actions
+      - record: ci:build_last_duration_seconds
+        expr: max by (pipeline) (label_replace(cicd_workflow_last_run_duration_seconds{branch="main"}, "pipeline", "$1", "workflow", "(.*)"))
+        labels:
+          ci_system: GitHub Actions
+      - record: ci:build_last_success
+        expr: max by (pipeline) (label_replace(cicd_workflow_last_run_status{branch="main"}, "pipeline", "$1", "workflow", "(.*)"))
+        labels:
+          ci_system: GitHub Actions
+
+      # ---- Jenkins ------------------------------------------------------------------
+      - record: ci:builds:total
+        expr: sum by (pipeline) (label_replace(default_jenkins_builds_total_build_count_total, "pipeline", "$1", "jenkins_job", "(.*)"))
+        labels:
+          ci_system: Jenkins
+      - record: ci:builds_success:total
+        expr: sum by (pipeline) (label_replace(default_jenkins_builds_success_build_count_total, "pipeline", "$1", "jenkins_job", "(.*)"))
+        labels:
+          ci_system: Jenkins
+      - record: ci:build_duration_seconds:avg
+        expr: |
+          sum by (pipeline) (label_replace(default_jenkins_builds_duration_milliseconds_summary_sum, "pipeline", "$1", "jenkins_job", "(.*)"))
+            / sum by (pipeline) (label_replace(default_jenkins_builds_duration_milliseconds_summary_count, "pipeline", "$1", "jenkins_job", "(.*)"))
+            / 1000
+        labels:
+          ci_system: Jenkins
+      - record: ci:build_last_duration_seconds
+        expr: max by (pipeline) (label_replace(default_jenkins_builds_last_build_duration_milliseconds, "pipeline", "$1", "jenkins_job", "(.*)")) / 1000
+        labels:
+          ci_system: Jenkins
+      - record: ci:build_last_success
+        expr: max by (pipeline) (label_replace(default_jenkins_builds_last_build_result, "pipeline", "$1", "jenkins_job", "(.*)"))
+        labels:
+          ci_system: Jenkins
+
+      # ---- Both ---------------------------------------------------------------------
+      - record: ci:build_success:ratio
+        expr: (ci:builds_success:total or ci:builds:total * 0) / ci:builds:total
