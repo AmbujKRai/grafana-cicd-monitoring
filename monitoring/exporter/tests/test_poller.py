@@ -47,6 +47,15 @@ def test_poll_fetches_jobs_once_and_reads_build_metrics(config):
     assert (config.data_dir / "state.json").exists()
 
 
+def test_poll_skips_ignored_events(config):
+    dependabot = api_run(9, 9, 0)
+    dependabot.update(event="dynamic", name="Dependabot Updates")
+    client = FakeGitHub([dependabot], {9: api_jobs(0)})
+    store = Store()
+    Poller(client, store, config).poll_once()
+    assert store.runs == {} and client.job_calls == []
+
+
 def test_poll_respects_api_budget(config):
     runs = [api_run(i, i, i * 10) for i in range(1, 11)]
     jobs = {i: api_jobs(i * 10) for i in range(1, 11)}

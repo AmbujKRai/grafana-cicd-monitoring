@@ -27,6 +27,8 @@ class Config:
     deploy_job: str = "Deploy to Staging"
     deploy_environment: str = "staging"
     main_branch: str = "main"
+    # "dynamic" runs are GitHub-managed jobs (Dependabot update checks, etc.), not pipelines
+    ignore_events: frozenset[str] = frozenset({"dynamic"})
     api_url: str = "https://api.github.com"
     raw_url: str = "https://raw.githubusercontent.com"
 
@@ -51,4 +53,5 @@ class Config:
             deploy_job=os.getenv("DEPLOY_JOB_NAME", "Deploy to Staging"),
             deploy_environment=os.getenv("DEPLOY_ENVIRONMENT", "staging"),
             main_branch=os.getenv("MAIN_BRANCH", "main"),
+            ignore_events=frozenset(e.strip() for e in os.getenv("IGNORE_EVENTS", "dynamic").split(",") if e.strip()),
         )

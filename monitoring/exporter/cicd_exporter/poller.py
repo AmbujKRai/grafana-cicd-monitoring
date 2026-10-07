@@ -51,6 +51,8 @@ class Poller:
         budget = self._job_budget()
         active = 0
         for api_run in api_runs:  # newest first, so fresh runs get the quota first
+            if api_run.get("event") in self.config.ignore_events:
+                continue
             run = self.store.upsert_run(summarize_run(api_run))
             if run["status"] in ACTIVE_STATUSES:
                 active += 1
