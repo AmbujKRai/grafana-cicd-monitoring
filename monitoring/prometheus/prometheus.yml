@@ -1,0 +1,35 @@
+# Prometheus configuration for the native (Windows/Linux, no Docker) setup.
+# docker-compose uses prometheus.docker.yml, which differs only in target host names.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    project: grafana-cicd-monitoring
+
+rule_files:
+  - rules/*.yml
+
+scrape_configs:
+  # GitHub Actions workflow runs, jobs, DORA and build-quality metrics
+  - job_name: cicd-exporter
+    static_configs:
+      - targets: ["localhost:9200"]
+        labels:
+          ci_system: github-actions
+
+  # Jenkins Prometheus metrics plugin
+  - job_name: jenkins
+    metrics_path: /prometheus/
+    static_configs:
+      - targets: ["localhost:8081"]
+        labels:
+          ci_system: jenkins
+
+  # The monitoring stack itself
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: grafana
+    static_configs:
+      - targets: ["localhost:3000"]

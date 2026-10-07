@@ -1,0 +1,13 @@
+apiVersion: 1
+
+providers:
+  - name: cicd-monitoring
+    orgId: 1
+    folder: CI/CD Monitoring
+    folderUid: cicd-monitoring
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    updateIntervalSeconds: 30
+    options:
+      path: ${GF_DASHBOARDS_DIR}

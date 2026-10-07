@@ -1,0 +1,16 @@
+apiVersion: 1
+
+policies:
+  - orgId: 1
+    receiver: cicd-webhook
+    group_by: ["grafana_folder", "alertname"]
+    group_wait: 10s
+    group_interval: 1m
+    repeat_interval: 4h
+    routes:
+      # Critical alerts (failed pipelines, security gate) are re-sent more often
+      - receiver: cicd-webhook
+        object_matchers:
+          - ["severity", "=", "critical"]
+        group_wait: 5s
+        repeat_interval: 1h

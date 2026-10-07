@@ -7,7 +7,7 @@ def venvPython() {
     return isUnix() ? '.venv/bin/python' : '.venv\\Scripts\\python.exe'
 }
 
-def run(String command) {
+def runCmd(String command) {
     if (isUnix()) {
         sh command
     } else {
@@ -15,7 +15,7 @@ def run(String command) {
     }
 }
 
-def runStatus(String command) {
+def runCmdStatus(String command) {
     return isUnix() ? sh(script: command, returnStatus: true) : bat(script: command, returnStatus: true)
 }
 
@@ -42,14 +42,14 @@ pipeline {
     stages {
         stage('Setup') {
             steps {
-                run 'python -m venv .venv'
-                run "${venvPython()} -m pip install --quiet -r requirements-dev.txt"
+                runCmd 'python -m venv .venv'
+                runCmd "${venvPython()} -m pip install --quiet -r requirements-dev.txt"
             }
         }
 
         stage('Lint') {
             steps {
-                run "${venvPython()} -m ruff check ."
+                runCmd "${venvPython()} -m ruff check ."
             }
         }
 
@@ -61,7 +61,7 @@ pipeline {
                         sleep time: 90, unit: 'SECONDS'
                     }
                 }
-                run "${venvPython()} -m pytest --junitxml=reports/junit.xml --cov=app --cov-report=xml:reports/coverage.xml"
+                runCmd "${venvPython()} -m pytest --junitxml=reports/junit.xml --cov=app --cov-report=xml:reports/coverage.xml"
             }
             post {
                 always {
@@ -72,16 +72,16 @@ pipeline {
 
         stage('Security Scan') {
             steps {
-                run "${venvPython()} -m bandit -r app -f json -o reports/bandit.json --exit-zero -q"
+                runCmd "${venvPython()} -m bandit -r app -f json -o reports/bandit.json --exit-zero -q"
                 // pip-audit exits non-zero when it finds vulnerabilities; the gate below decides
-                runStatus "${venvPython()} -m pip_audit -r requirements.txt -f json -o reports/pip-audit.json"
-                run "${venvPython()} ci/security_gate.py --bandit reports/bandit.json --pip-audit reports/pip-audit.json"
+                runCmdStatus "${venvPython()} -m pip_audit -r requirements.txt -f json -o reports/pip-audit.json"
+                runCmd "${venvPython()} ci/security_gate.py --bandit reports/bandit.json --pip-audit reports/pip-audit.json"
             }
         }
 
         stage('Package') {
             steps {
-                run "${venvPython()} ci/package.py"
+                runCmd "${venvPython()} ci/package.py"
                 archiveArtifacts artifacts: 'dist/*.zip', fingerprint: true
             }
         }
@@ -89,7 +89,7 @@ pipeline {
         stage('Deploy to Staging') {
             steps {
                 // Starts the release candidate locally and runs the API smoke test against it
-                run "${venvPython()} ci/smoke_test.py --serve"
+                runCmd "${venvPython()} ci/smoke_test.py --serve"
             }
         }
     }
