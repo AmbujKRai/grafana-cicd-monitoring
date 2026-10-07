@@ -49,6 +49,13 @@ def create_app(store: TaskStore | None = None) -> Flask:
         task = tasks.create(payload.get("title"), payload.get("priority", "medium"))
         return jsonify(task.to_dict()), 201
 
+    @app.get("/api/tasks/search")
+    def search_tasks():
+        term = (request.args.get("q") or "").strip().lower()
+        if not term:
+            return jsonify(error="query parameter q is required"), 400
+        return jsonify([t.to_dict() for t in tasks.list() if term in t.title.lower()])
+
     @app.get("/api/tasks/<int:task_id>")
     def get_task(task_id: int):
         task = tasks.get(task_id)

@@ -82,6 +82,19 @@ def test_unknown_route_returns_json_404(client):
     assert resp.json == {"error": "not found"}
 
 
+def test_search_tasks(client):
+    client.post("/api/tasks", json={"title": "Configure Grafana alerts"})
+    client.post("/api/tasks", json={"title": "Write Jenkinsfile"})
+    resp = client.get("/api/tasks/search?q=grafana")
+    assert resp.status_code == 200
+    assert [t["title"] for t in resp.json] == ["Configure Grafana alerts"]
+
+
+def test_search_requires_query(client):
+    resp = client.get("/api/tasks/search?q=  ")
+    assert resp.status_code == 400
+
+
 def test_stats_endpoint(client):
     task = client.post("/api/tasks", json={"title": "a"}).json
     client.post("/api/tasks", json={"title": "b"})
