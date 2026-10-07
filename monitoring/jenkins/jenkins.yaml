@@ -1,0 +1,69 @@
+# Jenkins Configuration as Code (JCasC) for the local CI server.
+# Loaded at start-up via CASC_JENKINS_CONFIG; edit this file instead of the UI.
+jenkins:
+  systemMessage: >-
+    Local CI server for the grafana-cicd-monitoring case study.
+    Configured as code (monitoring/jenkins/jenkins.yaml); build metrics are exported at /prometheus/.
+  numExecutors: 2
+  mode: NORMAL
+  # Demo only: Jenkins listens on 127.0.0.1 and has no logins. Use a security realm
+  # (e.g. matrix-auth + SSO) and useAuthenticatedEndpoint below in any shared setup.
+  authorizationStrategy: unsecured
+
+unclassified:
+  location:
+    url: "http://localhost:8081/"
+  prometheusConfiguration:
+    path: "prometheus"
+    defaultNamespace: "default"
+    jobAttributeName: "jenkins_job"
+    useAuthenticatedEndpoint: false
+    collectingMetricsPeriodInSeconds: 5
+    countSuccessfulBuilds: true
+    countUnstableBuilds: true
+    countFailedBuilds: true
+    countNotBuiltBuilds: true
+    countAbortedBuilds: true
+    fetchTestResults: true
+    collectNodeStatus: true
+    collectDiskUsage: false
+    collectCodeCoverage: false
+    appendParamLabel: false
+    appendStatusLabel: false
+    processingDisabledBuilds: false
+    # One series per build for the per-build duration chart, capped to keep cardinality low
+    perBuildMetrics: true
+    perBuildMetricsMaxBuilds: 30
+    perBuildMetricsMaxAgeInHours: 0
+  timestamper:
+    allPipelines: true
+
+jobs:
+  - script: |
+      pipelineJob('taskflow-api') {
+        displayName('TaskFlow API')
+        description('CI/CD pipeline for the TaskFlow API (Jenkinsfile from the main branch). Polls GitHub every minute.')
+        properties {
+          pipelineTriggers {
+            triggers {
+              pollSCM {
+                scmpoll_spec('* * * * *')
+              }
+            }
+          }
+        }
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote {
+                  url('${JENKINS_REPO_URL:-https://github.com/AmbujKRai/grafana-cicd-monitoring.git}')
+                }
+                branch('*/main')
+              }
+            }
+            scriptPath('Jenkinsfile')
+            lightweight(true)
+          }
+        }
+      }

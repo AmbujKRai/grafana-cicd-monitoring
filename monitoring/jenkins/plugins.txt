@@ -1,0 +1,10 @@
+# Jenkins plugins for the local CI server (resolved with jenkins-plugin-manager, dependencies included)
+configuration-as-code
+job-dsl
+workflow-aggregator
+git
+junit
+timestamper
+pipeline-stage-view
+pipeline-graph-view
+prometheus
