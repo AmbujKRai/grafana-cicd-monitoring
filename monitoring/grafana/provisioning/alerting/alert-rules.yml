@@ -30,7 +30,7 @@ groups:
               expression: A
               conditions:
                 - evaluator: { type: lt, params: [1] }
-        noDataState: OK
+        noDataState: KeepLast
         execErrState: Error
         for: 0s
         dashboardUid: gha-performance
@@ -64,7 +64,7 @@ groups:
               conditions:
                 # result ordinal 2 = FAILURE
                 - evaluator: { type: within_range, params: [1.5, 2.5] }
-        noDataState: OK
+        noDataState: KeepLast
         execErrState: Error
         for: 0s
         dashboardUid: jenkins-builds
@@ -99,7 +99,7 @@ groups:
               expression: A
               conditions:
                 - evaluator: { type: lt, params: [0.8] }
-        noDataState: OK
+        noDataState: KeepLast
         execErrState: Error
         for: 1m
         dashboardUid: gha-performance
@@ -139,7 +139,7 @@ groups:
               expression: A
               conditions:
                 - evaluator: { type: gt, params: [1.5] }
-        noDataState: OK
+        noDataState: KeepLast
         execErrState: Error
         for: 0s
         dashboardUid: gha-performance
@@ -172,7 +172,7 @@ groups:
               expression: A
               conditions:
                 - evaluator: { type: gt, params: [0] }
-        noDataState: OK
+        noDataState: KeepLast
         execErrState: Error
         for: 5m
         labels:
@@ -203,7 +203,7 @@ groups:
               expression: A
               conditions:
                 - evaluator: { type: gt, params: [0] }
-        noDataState: OK
+        noDataState: KeepLast
         execErrState: Error
         for: 5m
         labels:
@@ -239,7 +239,7 @@ groups:
               expression: A
               conditions:
                 - evaluator: { type: lt, params: [1] }
-        noDataState: OK
+        noDataState: KeepLast
         execErrState: Error
         for: 0s
         dashboardUid: build-quality
@@ -272,7 +272,7 @@ groups:
               expression: A
               conditions:
                 - evaluator: { type: lt, params: [1] }
-        noDataState: OK
+        noDataState: KeepLast
         execErrState: Error
         for: 0s
         dashboardUid: build-quality
@@ -340,7 +340,7 @@ groups:
               expression: A
               conditions:
                 - evaluator: { type: lt, params: [1] }
-        noDataState: OK
+        noDataState: KeepLast
         execErrState: Error
         for: 2m
         labels:
@@ -371,7 +371,7 @@ groups:
               expression: A
               conditions:
                 - evaluator: { type: lt, params: [10] }
-        noDataState: OK
+        noDataState: KeepLast
         execErrState: Error
         for: 0s
         labels:
@@ -401,7 +401,7 @@ groups:
               expression: A
               conditions:
                 - evaluator: { type: gt, params: [900] }
-        noDataState: OK
+        noDataState: KeepLast
         execErrState: Error
         for: 0s
         labels:

@@ -1343,7 +1343,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "cicd_run_duration_seconds{workflow=\"$workflow\"}",
+          "expr": "cicd_run_duration_seconds{workflow=\"$workflow\"} + 0",
           "legendFormat": "__auto",
           "range": false,
           "instant": true,
@@ -1356,7 +1356,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "cicd_run_wait_seconds{workflow=\"$workflow\"}",
+          "expr": "cicd_run_wait_seconds{workflow=\"$workflow\"} + 0",
           "legendFormat": "__auto",
           "range": false,
           "instant": true,

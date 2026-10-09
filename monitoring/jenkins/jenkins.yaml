@@ -6,6 +6,8 @@ jenkins:
     Configured as code (monitoring/jenkins/jenkins.yaml); build metrics are exported at /prometheus/.
   numExecutors: 2
   mode: NORMAL
+  # retry transient git fetch errors ("Empty reply from server") before failing the build
+  scmCheckoutRetryCount: 3
   # Demo only: Jenkins listens on 127.0.0.1 and has no logins. Use a security realm
   # (e.g. matrix-auth + SSO) and useAuthenticatedEndpoint below in any shared setup.
   authorizationStrategy: unsecured
@@ -43,6 +45,10 @@ jobs:
       pipelineJob('taskflow-api') {
         displayName('TaskFlow API')
         description('CI/CD pipeline for the TaskFlow API (Jenkinsfile from the main branch). Polls GitHub every minute.')
+        // declared here as well as in the Jenkinsfile so the job is parameterised before its first build
+        parameters {
+          booleanParam('SIMULATE_SLOW_BUILD', false, 'Add a 90 second delay to the test stage (performance-regression demo)')
+        }
         properties {
           pipelineTriggers {
             triggers {

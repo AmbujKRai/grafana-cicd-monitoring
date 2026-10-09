@@ -28,10 +28,19 @@ def test_summarize_run_extracts_fields():
 
 def test_run_duration_uses_last_job_completion():
     run = completed_run()
-    # 5 jobs, each waiting 5 s; work: 20 + 45 + 90 + 30 + 10 seconds
+    # 5 jobs, each waiting 5 s for a runner; work: 20 + 45 + 90 + 30 + 10 seconds.
+    # Duration counts from the first job start, so the first 5 s wait is reported as wait time.
     assert run_end(run) == run["jobs"][-1]["completed_ts"]
-    assert round(run_duration(run)) == 5 * 5 + 195
+    assert round(run_duration(run)) == 4 * 5 + 195
     assert round(run_wait_time(run)) == 5
+
+
+def test_queued_run_wait_is_not_counted_as_duration():
+    run = completed_run()
+    run["created_ts"] -= 120  # e.g. waited two minutes behind another run (concurrency group)
+    run["started_ts"] -= 120
+    assert round(run_duration(run)) == 4 * 5 + 195
+    assert round(run_wait_time(run)) == 125
 
 
 def test_skipped_jobs_have_no_duration():

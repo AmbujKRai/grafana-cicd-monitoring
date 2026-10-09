@@ -96,20 +96,30 @@ def run_end(run: dict) -> float | None:
     return max(ends) if ends else run.get("updated_ts")
 
 
-def run_duration(run: dict) -> float | None:
-    return span(run.get("started_ts"), run_end(run))
-
-
-def run_wait_time(run: dict) -> float | None:
-    """Time from the trigger until the first job started (runner pick-up latency)."""
+def first_job_start(run: dict) -> float | None:
     starts = [
         j["started_ts"]
         for j in run.get("jobs") or []
         if j.get("started_ts") and j.get("conclusion") != "skipped"
     ]
-    if not starts or run.get("created_ts") is None:
+    return min(starts) if starts else None
+
+
+def run_duration(run: dict) -> float | None:
+    """Execution time: first job start -> last job end.
+
+    Time spent waiting (concurrency queue, runner pick-up) is reported separately by
+    run_wait_time, so a queued run does not look like a slow build.
+    """
+    return span(first_job_start(run) or run.get("started_ts"), run_end(run))
+
+
+def run_wait_time(run: dict) -> float | None:
+    """Time from the trigger until the first job started (queue + runner pick-up latency)."""
+    start = first_job_start(run)
+    if start is None or run.get("created_ts") is None:
         return None
-    return max(0.0, min(starts) - run["created_ts"])
+    return max(0.0, start - run["created_ts"])
 
 
 def find_job(run: dict, name: str) -> dict | None:

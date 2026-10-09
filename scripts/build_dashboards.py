@@ -1077,8 +1077,9 @@ def gha_performance() -> Board:
         table(
             "Recent runs",
             [
-                q(f"cicd_run_duration_seconds{{{WF}}}", instant=True, fmt="table", ref="A"),
-                q(f"cicd_run_wait_seconds{{{WF}}}", instant=True, fmt="table", ref="B"),
+                # "+ 0" drops __name__ so both results share identical labels and merge into one row per run
+                q(f"cicd_run_duration_seconds{{{WF}}} + 0", instant=True, fmt="table", ref="A"),
+                q(f"cicd_run_wait_seconds{{{WF}}} + 0", instant=True, fmt="table", ref="B"),
             ],
             [
                 {"id": "merge", "options": {}},
