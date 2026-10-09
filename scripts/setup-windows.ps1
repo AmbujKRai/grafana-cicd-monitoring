@@ -29,7 +29,7 @@ function Get-VerifiedFile($Release) {
     $target = Join-Path $Downloads $Release.File
     if (Test-Path $target) {
         if ((Get-FileHash $target -Algorithm SHA256).Hash -eq $Release.Sha256) {
-            Write-Host "    $($Release.File) already downloaded"
+            Write-Host "    $($Release.File) already downloaded (SHA-256 verified)"
             return $target
         }
         Remove-Item $target
