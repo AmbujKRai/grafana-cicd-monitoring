@@ -537,8 +537,9 @@ GH_SUCCESS_RATE = (
     f'sum(cicd_workflow_runs_window{{{WF},window="$window",conclusion="success"}})'
     f' / sum(cicd_workflow_runs_window{{{WF},window="$window",conclusion=~"success|failure"}})'
 )
-JENKINS_SUCCESS = 'sum(default_jenkins_builds_success_build_count_total{jenkins_job=~"$job"}) or vector(0)'
-JENKINS_TOTAL = 'sum(default_jenkins_builds_total_build_count_total{jenkins_job=~"$job"})'
+# Per-build gauges instead of the plugin's build counters: those reset whenever Jenkins restarts
+JENKINS_SUCCESS = 'count(default_jenkins_builds_build_result_ordinal{jenkins_job=~"$job"} == 0) or vector(0)'
+JENKINS_TOTAL = 'count(default_jenkins_builds_build_result_ordinal{jenkins_job=~"$job"})'
 
 GH_RUN_DURATION = q(
     "label_replace(cicd_run_duration_seconds{"
@@ -1462,13 +1463,13 @@ def jenkins() -> Board:
             "Builds (success / failed)",
             [
                 q(
-                    f"sum(default_jenkins_builds_success_build_count_total{{{j}}}) or vector(0)",
+                    f"count(default_jenkins_builds_build_result_ordinal{{{j}}} == 0) or vector(0)",
                     "success",
                     "A",
                     instant=True,
                 ),
                 q(
-                    f"sum(default_jenkins_builds_failed_build_count_total{{{j}}}) or vector(0)",
+                    f"count(default_jenkins_builds_build_result_ordinal{{{j}}} == 2) or vector(0)",
                     "failed",
                     "B",
                     instant=True,

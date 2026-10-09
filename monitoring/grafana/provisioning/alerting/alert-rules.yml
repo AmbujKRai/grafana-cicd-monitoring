@@ -6,7 +6,7 @@ apiVersion: 1
 groups:
   - orgId: 1
     name: pipeline-health
-    folder: CI/CD Alerts
+    folder: Pipeline Alerts
     interval: 30s
     rules:
       - uid: cicd-pipeline-failed
@@ -113,7 +113,7 @@ groups:
 
   - orgId: 1
     name: pipeline-performance
-    folder: CI/CD Alerts
+    folder: Pipeline Alerts
     interval: 30s
     rules:
       - uid: cicd-slow-build
@@ -215,7 +215,7 @@ groups:
 
   - orgId: 1
     name: quality-security
-    folder: CI/CD Alerts
+    folder: Pipeline Alerts
     interval: 30s
     rules:
       - uid: cicd-security-gate
@@ -286,7 +286,7 @@ groups:
 
   - orgId: 1
     name: monitoring-stack
-    folder: CI/CD Alerts
+    folder: Pipeline Alerts
     interval: 30s
     rules:
       - uid: cicd-exporter-down

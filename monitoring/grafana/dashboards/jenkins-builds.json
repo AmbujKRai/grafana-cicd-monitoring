@@ -435,7 +435,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(default_jenkins_builds_success_build_count_total{jenkins_job=~\"$job\"}) or vector(0)",
+          "expr": "count(default_jenkins_builds_build_result_ordinal{jenkins_job=~\"$job\"} == 0) or vector(0)",
           "legendFormat": "success",
           "range": false,
           "instant": true,
@@ -447,7 +447,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(default_jenkins_builds_failed_build_count_total{jenkins_job=~\"$job\"}) or vector(0)",
+          "expr": "count(default_jenkins_builds_build_result_ordinal{jenkins_job=~\"$job\"} == 2) or vector(0)",
           "legendFormat": "failed",
           "range": false,
           "instant": true,

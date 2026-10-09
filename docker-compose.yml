@@ -54,7 +54,10 @@ services:
       GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_USERS_DEFAULT_THEME: dark
-      GF_PLUGINS_PREINSTALL_DISABLED: "true"
+      # only the Prometheus data source is needed (pinned); the other bundled plugins are not loaded
+      GF_PLUGINS_PREINSTALL_SYNC: prometheus@13.2.3
+      GF_PLUGINS_PREINSTALL_AUTO_UPDATE: "false"
+      GF_PLUGINS_DISABLE_PLUGINS: elasticsearch,grafana-postgresql-datasource,influxdb,jaeger,loki,mssql,mysql,opentsdb,zipkin,grafana-pyroscope-datasource,stackdriver,tempo,cloudwatch,grafana-azure-monitor-datasource,graphite,grafana-lokiexplore-app,grafana-pyroscope-app,grafana-exploretraces-app,grafana-metricsdrilldown-app,grafana-advisor-app
       GF_ANALYTICS_REPORTING_ENABLED: "false"
       GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
       GF_NEWS_NEWS_FEED_ENABLED: "false"

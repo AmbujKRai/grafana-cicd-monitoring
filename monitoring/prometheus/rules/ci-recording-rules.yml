@@ -30,19 +30,18 @@ groups:
           ci_system: GitHub Actions
 
       # ---- Jenkins ------------------------------------------------------------------
+      # Built from the per-build gauges (last 30 builds): the plugin's build counters reset
+      # whenever Jenkins restarts, which would make the success rate jump.
       - record: ci:builds:total
-        expr: sum by (pipeline) (label_replace(default_jenkins_builds_total_build_count_total, "pipeline", "$1", "jenkins_job", "(.*)"))
+        expr: count by (pipeline) (label_replace(default_jenkins_builds_build_result_ordinal, "pipeline", "$1", "jenkins_job", "(.*)"))
         labels:
           ci_system: Jenkins
       - record: ci:builds_success:total
-        expr: sum by (pipeline) (label_replace(default_jenkins_builds_success_build_count_total, "pipeline", "$1", "jenkins_job", "(.*)"))
+        expr: count by (pipeline) (label_replace(default_jenkins_builds_build_result_ordinal == 0, "pipeline", "$1", "jenkins_job", "(.*)"))
         labels:
           ci_system: Jenkins
       - record: ci:build_duration_seconds:avg
-        expr: |
-          sum by (pipeline) (label_replace(default_jenkins_builds_duration_milliseconds_summary_sum, "pipeline", "$1", "jenkins_job", "(.*)"))
-            / sum by (pipeline) (label_replace(default_jenkins_builds_duration_milliseconds_summary_count, "pipeline", "$1", "jenkins_job", "(.*)"))
-            / 1000
+        expr: avg by (pipeline) (label_replace(default_jenkins_builds_build_duration_milliseconds, "pipeline", "$1", "jenkins_job", "(.*)")) / 1000
         labels:
           ci_system: Jenkins
       - record: ci:build_last_duration_seconds

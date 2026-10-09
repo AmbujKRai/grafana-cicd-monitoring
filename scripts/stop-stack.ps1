@@ -14,7 +14,8 @@ foreach ($name in $Services.Keys) {
     $proc = Get-Process -Id $id -ErrorAction SilentlyContinue
     # Only stop the process if the pid still belongs to the component we started
     if ($proc -and $proc.ProcessName -like "$($Services[$name].Process)*") {
-        Stop-Process -Id $id -Force
+        # /T stops child processes too (the venv python.exe is a launcher that starts the real interpreter)
+        taskkill.exe /PID $id /T /F | Out-Null
         Write-Host ("  stopped {0,-11} (pid {1})" -f $name, $id)
     } else {
         Write-Host ("  {0,-11} was not running" -f $name)
