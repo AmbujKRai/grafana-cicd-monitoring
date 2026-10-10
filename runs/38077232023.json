@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-10T18:48:46+00:00",
+  "run": {
+    "id": 38077232023,
+    "number": 21,
+    "attempt": 1,
+    "workflow": "CI/CD Pipeline",
+    "sha": "5c6e619f6583b15dfe485391728b9c10e11b4f02",
+    "branch": "main",
+    "event": "push",
+    "actor": "AmbujKRai"
+  },
+  "jobs": {
+    "lint": "success",
+    "test": "failure",
+    "security": "success",
+    "build": "skipped",
+    "deploy-staging": "skipped"
+  },
+  "tests": {
+    "total": 29,
+    "failed": 2,
+    "errors": 0,
+    "skipped": 0,
+    "duration_seconds": 0.313,
+    "passed": 27
+  },
+  "coverage": {
+    "line_rate": 0.993,
+    "branch_rate": 0.9444
+  },
+  "lint": {
+    "issues": 0
+  },
+  "security": {
+    "bandit": {
+      "high": 0,
+      "medium": 0,
+      "low": 0
+    },
+    "pip_audit": {
+      "vulnerabilities": 0,
+      "packages": []
+    },
+    "trivy": null
+  },
+  "artifact": null,
+  "smoke_test": null,
+  "quality_gates": {
+    "tests": false,
+    "coverage": true,
+    "sast": true,
+    "sca": true
+  }
+}
